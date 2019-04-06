@@ -248,7 +248,7 @@ modifying the `HKEY_CURRENT_USER/Environment/PATH` registry key."""
 PRE_MESSAGE_NO_MODIFY_PATH = """This path needs to be in your `PATH` environment variable,
 but will not be added automatically."""
 
-POST_MESSAGE_UNIX = """{poetry} ({version}) is installed now. Great!
+POST_MESSAGE_UNIX = """Your patched version of {poetry} ({version}) is installed now. Great!
 
 To get started you need {poetry}'s bin directory ({poetry_home_bin}) in your `PATH`
 environment variable. Next time you log in this will be done
@@ -457,11 +457,28 @@ class Installer:
         print("Installing version: " + colorize("info", version))
 
         self.make_lib(version)
+        self.patch_lib()
         self.make_bin()
         self.make_env()
         self.update_path()
 
         return 0
+
+    def patch_lib(self):
+        url = "https://raw.githubusercontent.com/boyeah/poetry/master/poetry/masonry/builders/wheel.py"
+        print("Patching wheel.py with file from {}...".format(url))
+        try:
+            r = urlopen(url)
+        except HTTPError as e:
+            if e.code == 404:
+                raise RuntimeError("Could not find patch file: {}".format(url))
+            raise
+        patch = r.read().decode()
+        with open(
+            os.path.join(POETRY_LIB, "poetry", "masonry", "builders", "wheel.py"), "w"
+        ) as f:
+            f.write(patch)
+        print("Patching complete")
 
     def make_lib(self, version):
         """
